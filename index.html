@@ -654,7 +654,19 @@
   .calc-historial div{font-family:'Share Tech Mono', monospace; padding:2px 0; border-bottom:1px dashed rgba(var(--blanco-rgb),0.08);}
 
   @media (max-width:420px){
-    .calc-drawer{width:100%;}
+    .calc-drawer{
+      top:auto; bottom:0; left:0; right:0;
+      width:100%;
+      height:auto;
+      max-height:78vh;
+      border-radius:18px 18px 0 0;
+      border-right:none;
+      border-top:1px solid var(--azul-borde);
+      box-shadow:0 -16px 40px rgba(var(--negro-rgb),0.5);
+      transform:translateY(100%);
+      padding-bottom:32px;
+    }
+    .calc-drawer.abierta{transform:translateY(0);}
   }
 
   footer{
@@ -670,7 +682,9 @@
     position:fixed;
     top:20px; right:20px;
     z-index:40;
+    transition:opacity .2s ease, transform .2s ease;
   }
+  .selector-tema.oculto{opacity:0; pointer-events:none; transform:scale(0.8);}
   .selector-tema .btn-tema{
     width:56px; height:56px;
     border-radius:50%;
@@ -1464,15 +1478,20 @@ document.querySelectorAll('.calc-teclado button').forEach(btn => {
 
 const calcDrawer = document.getElementById('calc-drawer');
 const calcFab = document.getElementById('btn-calc-toggle');
+const selectorTema = document.querySelector('.selector-tema');
 document.getElementById('btn-calc-toggle').addEventListener('click', () => {
   calcDrawer.classList.add('abierta');
   calcDrawer.setAttribute('aria-hidden', 'false');
   calcFab.classList.add('oculto');
+  selectorTema.classList.add('oculto');
+  menuTema.classList.remove('abierto');
+  btnTemaToggle.setAttribute('aria-expanded', 'false');
 });
 document.getElementById('calc-cerrar').addEventListener('click', () => {
   calcDrawer.classList.remove('abierta');
   calcDrawer.setAttribute('aria-hidden', 'true');
   calcFab.classList.remove('oculto');
+  selectorTema.classList.remove('oculto');
 });
 
 /* =========================================================
