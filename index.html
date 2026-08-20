@@ -770,7 +770,7 @@
           <button id="btn-generar" class="btn-primario">Generar partida</button>
           <button id="btn-generar-plus" class="btn-primario btn-plus">Generar partida +</button>
         </div>
-        <p class="nota-oculta" style="margin-top:10px;">El modo <strong>+</strong> usa números del 1 al 100 y exige superar un objetivo por encima de 200.</p>
+        <p class="nota-oculta" style="margin-top:10px;">El modo <strong>+</strong> usa números del 1 al 100 y un objetivo de entre 201 y 2500.</p>
 
         <div id="contenido-juego" style="margin-top:24px; display:none;">
           <div class="zona-numeros">
@@ -1030,7 +1030,7 @@ function generarPartidaCifras(){
 function generarPartidaPlus(){
   const fichasIniciales = [];
   for (let i = 0; i < 6; i++) fichasIniciales.push(randInt(1, 100));
-  const objetivoFinal = randInt(201, 999);
+  const objetivoFinal = randInt(201, 2500);
   return { fichasIniciales, objetivoFinal, historialPasos:[], c:null, resultadoExacto:null, modo:'plus' };
 }
 
