@@ -763,24 +763,6 @@
     transition:transform .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, background .2s ease;
   }
   .btn-temporizador:hover{transform:scale(1.04);}
-  .btn-temporizador.finalizado{
-    border-color:var(--rojo-vivo);
-    color:var(--texto-sobre-rojo);
-    background:linear-gradient(160deg, var(--rojo-vivo), var(--rojo-intenso));
-    box-shadow:0 0 22px rgba(var(--rojo-vivo-rgb),0.55), 0 10px 24px rgba(var(--negro-rgb),0.5);
-    animation:pulsoTemporizador 1.1s ease-in-out infinite;
-    font-family:'Work Sans', sans-serif;
-    font-weight:700;
-    font-size:0.82rem;
-    white-space:normal;
-    text-align:center;
-    line-height:1.2;
-    max-width:180px;
-    height:auto;
-    min-height:56px;
-    padding:10px 16px;
-    border-radius:20px;
-  }
   @keyframes pulsoTemporizador{0%,100%{opacity:1;} 50%{opacity:0.72;}}
 
   .panel-temporizador{
@@ -841,14 +823,67 @@
     background:var(--superficie-1);
     color:var(--blanco);
   }
-  .fila-botones-temporizador{display:flex; gap:8px;}
-  .fila-botones-temporizador button{flex:1; width:auto; font-size:0.82rem; padding:10px 8px;}
+  .fila-switch-temporizador{display:flex; align-items:center; gap:12px;}
+  .switch-temporizador{position:relative; display:inline-block; width:46px; height:26px; flex-shrink:0;}
+  .switch-temporizador input{opacity:0; width:0; height:0; position:absolute;}
+  .switch-slider{
+    position:absolute; inset:0; cursor:pointer;
+    background:var(--superficie-1);
+    border:1px solid var(--azul-borde);
+    border-radius:999px;
+    transition:background .2s ease, border-color .2s ease;
+  }
+  .switch-slider::before{
+    content:"";
+    position:absolute;
+    height:18px; width:18px;
+    left:3px; top:2px;
+    background:var(--blanco-tenue);
+    border-radius:50%;
+    transition:transform .2s ease, background .2s ease;
+  }
+  .switch-temporizador input:checked + .switch-slider{background:rgba(var(--verde-rgb),0.35); border-color:var(--verde-led);}
+  .switch-temporizador input:checked + .switch-slider::before{transform:translateX(20px); background:var(--verde-led);}
+  .switch-texto{display:flex; flex-direction:column; font-size:0.78rem; color:var(--blanco-tenue); line-height:1.3;}
+  .switch-texto strong{color:var(--blanco); font-size:0.9rem;}
+
+  .btn-temporizador.apagado{
+    opacity:0.6;
+    border-color:var(--azul-borde);
+    color:var(--blanco-tenue);
+    box-shadow:none;
+  }
+  .btn-temporizador.pulso-fin{
+    animation:pulsoTemporizador 0.3s ease-in-out 2;
+    border-color:var(--rojo-marcador);
+  }
+
+  /* ---------- DESTELLO DE FIN DE TIEMPO (a toda pantalla) ---------- */
+  .flash-alerta{
+    position:fixed;
+    inset:0;
+    background:rgba(var(--rojo-marcador-rgb), 0.6);
+    opacity:0;
+    pointer-events:none;
+    z-index:200;
+  }
+  .flash-alerta.activo{
+    animation:parpadeoFinTiempo 0.9s ease-out;
+  }
+  @keyframes parpadeoFinTiempo{
+    0%{opacity:0;}
+    12%{opacity:1;}
+    100%{opacity:0;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .flash-alerta.activo{animation-duration:0.001ms;}
+  }
 
   @media (max-width:480px){
     .barra-iconos-derecha{top:16px; right:16px; gap:8px;}
     .btn-icono-redondo{width:50px; height:50px; font-size:1.15rem;}
     .btn-temporizador{height:50px; font-size:0.92rem; padding:0 12px; min-width:56px;}
-    .btn-temporizador.finalizado{min-height:50px; font-size:0.76rem; max-width:150px;}
+    .switch-texto{font-size:0.72rem;}
     .calc-fab{width:50px; height:50px; top:16px; left:16px;}
   }
 
@@ -1028,13 +1063,21 @@
         </div>
       </div>
 
-      <div class="fila-botones-temporizador">
-        <button type="button" id="btn-temporizador-iniciar" class="btn-secundario">▶ Iniciar</button>
-        <button type="button" id="btn-temporizador-reiniciar" class="btn-secundario">↺ Reiniciar</button>
+      <div class="fila-switch-temporizador">
+        <label class="switch-temporizador">
+          <input type="checkbox" id="switch-temporizador">
+          <span class="switch-slider"></span>
+        </label>
+        <div class="switch-texto">
+          <strong id="switch-temporizador-estado">Apagado</strong>
+          <span>Se pone en marcha al generar una partida</span>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<div class="flash-alerta" id="flash-alerta" aria-hidden="true"></div>
 
 <aside class="calc-drawer" id="calc-drawer" aria-hidden="true">
   <button class="calc-cerrar" id="calc-cerrar" aria-label="Cerrar calculadora">✕</button>
@@ -1345,6 +1388,7 @@ function pintarPartida(nuevoEstado){
   document.getElementById('btn-ver-original').style.display = estadoJuego.modo === 'plus' ? 'none' : 'block';
 
   iniciarConstructor();
+  iniciarCuentaSiArmado();
 }
 
 document.getElementById('btn-generar').addEventListener('click', () => {
@@ -1684,12 +1728,14 @@ const iconoTemporizadorTexto = document.getElementById('icono-temporizador-texto
 const displayTemporizador = document.getElementById('display-temporizador');
 const inputMin = document.getElementById('input-min');
 const inputSeg = document.getElementById('input-seg');
-const btnTemporizadorIniciar = document.getElementById('btn-temporizador-iniciar');
+const switchTemporizador = document.getElementById('switch-temporizador');
+const switchTemporizadorEstado = document.getElementById('switch-temporizador-estado');
+const flashAlerta = document.getElementById('flash-alerta');
 
-let temporizadorConfigurado = 30; // segundos, se usa al pulsar "Reiniciar"
+let temporizadorConfigurado = 30; // segundos elegidos por el usuario
 let temporizadorRestante = 30;
-let temporizadorCorriendo = false;
-let temporizadorFinalizado = false;
+let temporizadorArmado = false;   // interruptor ON/OFF
+let temporizadorCorriendo = false; // contando activamente (solo durante una partida)
 let temporizadorIntervalo = null;
 
 function formatearTiempo(totalSegundos){
@@ -1699,15 +1745,16 @@ function formatearTiempo(totalSegundos){
 }
 
 function refrescarUiTemporizador(){
-  if (temporizadorFinalizado){
-    btnTemporizadorToggle.classList.add('finalizado');
-    iconoTemporizadorTexto.textContent = 'Se acabó el tiempo';
-  } else {
-    btnTemporizadorToggle.classList.remove('finalizado');
-    iconoTemporizadorTexto.textContent = `⏱ ${formatearTiempo(temporizadorRestante)}`;
-  }
+  btnTemporizadorToggle.classList.toggle('apagado', !temporizadorArmado);
+  iconoTemporizadorTexto.textContent = temporizadorArmado
+    ? `⏱ ${formatearTiempo(temporizadorRestante)}`
+    : '⏱ OFF';
+
   displayTemporizador.textContent = formatearTiempo(temporizadorRestante);
-  btnTemporizadorIniciar.textContent = temporizadorCorriendo ? '⏸ Parar' : '▶ Iniciar';
+  inputMin.disabled = temporizadorCorriendo;
+  inputSeg.disabled = temporizadorCorriendo;
+  switchTemporizador.checked = temporizadorArmado;
+  switchTemporizadorEstado.textContent = temporizadorArmado ? 'Encendido' : 'Apagado';
 }
 
 function pausarTemporizador(){
@@ -1716,7 +1763,17 @@ function pausarTemporizador(){
     clearInterval(temporizadorIntervalo);
     temporizadorIntervalo = null;
   }
-  refrescarUiTemporizador();
+}
+
+function dispararFlashFinTiempo(){
+  flashAlerta.classList.remove('activo');
+  void flashAlerta.offsetWidth; // fuerza el reflow para poder repetir la animación
+  flashAlerta.classList.add('activo');
+
+  btnTemporizadorToggle.classList.remove('pulso-fin');
+  void btnTemporizadorToggle.offsetWidth;
+  btnTemporizadorToggle.classList.add('pulso-fin');
+  setTimeout(() => btnTemporizadorToggle.classList.remove('pulso-fin'), 900);
 }
 
 function tickTemporizador(){
@@ -1724,23 +1781,18 @@ function tickTemporizador(){
   if (temporizadorRestante <= 0){
     temporizadorRestante = 0;
     pausarTemporizador();
-    temporizadorFinalizado = true;
+    dispararFlashFinTiempo();
   }
   refrescarUiTemporizador();
 }
 
-function iniciarTemporizador(){
-  if (temporizadorCorriendo || temporizadorRestante <= 0) return;
-  temporizadorFinalizado = false;
+// Se llama automáticamente al generar una partida (normal o +), solo si el interruptor está en ON
+function iniciarCuentaSiArmado(){
+  pausarTemporizador();
+  if (!temporizadorArmado) return;
+  temporizadorRestante = temporizadorConfigurado;
   temporizadorCorriendo = true;
   temporizadorIntervalo = setInterval(tickTemporizador, 1000);
-  refrescarUiTemporizador();
-}
-
-function reiniciarTemporizador(){
-  pausarTemporizador();
-  temporizadorFinalizado = false;
-  temporizadorRestante = temporizadorConfigurado;
   refrescarUiTemporizador();
 }
 
@@ -1752,16 +1804,20 @@ function aplicarTiempoDesdeInputs(){
   temporizadorConfigurado = Math.max(1, min * 60 + seg);
   if (!temporizadorCorriendo){
     temporizadorRestante = temporizadorConfigurado;
-    temporizadorFinalizado = false;
   }
   refrescarUiTemporizador();
 }
 
-btnTemporizadorIniciar.addEventListener('click', () => {
-  if (temporizadorCorriendo) pausarTemporizador();
-  else iniciarTemporizador();
+switchTemporizador.addEventListener('change', () => {
+  temporizadorArmado = switchTemporizador.checked;
+  if (!temporizadorArmado){
+    // Apagar cancela cualquier cuenta atrás en curso
+    pausarTemporizador();
+    temporizadorRestante = temporizadorConfigurado;
+  }
+  refrescarUiTemporizador();
 });
-document.getElementById('btn-temporizador-reiniciar').addEventListener('click', reiniciarTemporizador);
+
 inputMin.addEventListener('change', aplicarTiempoDesdeInputs);
 inputSeg.addEventListener('change', aplicarTiempoDesdeInputs);
 
